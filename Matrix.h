@@ -13,6 +13,7 @@
 #include <map>
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <cassert>
 
 using namespace std;
@@ -88,38 +89,37 @@ public:
         }
     }
     
-    Matrix(const vector<vector<int>>& data, int fillWith = 0, const vector<Constraint>& constraints = {}) :
+    Matrix(const vector<vector<int>>& data, const vector<Constraint>& constraints = {}) throw(Exception) :
         m_numRows(data.size()),
         m_numColumns(0),
-        m_Data(data),
         m_Constraints(constraints)
     {
-        if (m_Data.size() > 0) {
-            m_numColumns = m_Data.front().size();
-            auto first = m_Data.begin();
-
-            for_each(m_Data.begin(), m_Data.end(), [&](const vector<int>& row) {
-               if (row.size() != m_numColumns) {
-                   throw Exception(invalidSize);
-               }
-            });
-        }
+        setData(data);
     }
     
     Matrix(const Matrix&) = default;
     Matrix(Matrix&&) = default;
     
     Matrix& operator = (const Matrix&) = default;
+    Matrix& operator = (Matrix&&) = default;
     
-    ~Matrix() = default;
+    virtual ~Matrix() = default;
     
     // Data access
     const vector<int>& getRow(size_t row) const throw (Exception) {
-        // check index
         if (row > m_numRows) {
             throw Exception(outOfRange);
         }
         return m_Data[row];
+    }
+    
+    int getRowTotal(size_t row) const throw (Exception) {
+        if (row > m_numRows) {
+            throw Exception(outOfRange);
+        }
+        int total = 0;
+        for_each(m_Data[row].begin(), m_Data[row].end(), [&total](int val) {total += val;});
+        return total;
     }
     
     void setRow(size_t row, const vector<int>& data) throw (Exception) {
@@ -153,6 +153,15 @@ public:
         return std::move(colData);
     }
     
+    int getColumnTotal(size_t col) const throw (Exception) {
+        if (col > m_numRows) {
+            throw Exception(outOfRange);
+        }
+        int total = 0;
+        for_each(m_Data.begin(), m_Data.end(), [&](const vector<int>& row) {total += row[col];});
+        return total;
+    }
+    
     void setColumn(size_t col, const vector<int>& data) throw (Exception) {
         if (col > m_numColumns) {
             throw Exception(outOfRange);
@@ -181,6 +190,43 @@ public:
         for_each(data.begin(), data.end(), [&](int val) {
             m_Data[row++][col] = val;
         });
+    }
+    
+    const vector<vector<int>> getData() const {return m_Data;}
+    
+    void setData(const vector<vector<int>>& data, int fillWith = 0) throw(Exception) {
+        auto copy = data;
+        setData(std::move(copy), fillWith);
+    }
+    
+    void setData(vector<vector<int>>&& data) throw(Exception) {
+        m_numRows = data.size();
+        m_numColumns = 0;
+        if (data.size() > 0) {
+            m_numColumns = data.front().size();
+            auto first = data.begin();
+
+            for_each(data.begin(), data.end(), [&](const vector<int>& row) {
+               if (row.size() != m_numColumns) {
+                   throw Exception(invalidSize);
+               }
+            });
+        }
+        m_Data = data; 
+        checkConstraints();
+    }
+    
+    void print() const {
+        if (m_numRows && m_numColumns) {
+            for_each(m_Data.begin(), m_Data.end(), [](const vector<int>& row) {
+                for_each(row.begin(), row.end(), [](int val) {
+                    cout << val << " ";
+                    cout << endl;
+                });
+            });
+        } else {
+            cout << "The matrix is empty." << endl;
+        }
     }
 
 protected:

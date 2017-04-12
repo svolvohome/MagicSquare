@@ -1,4 +1,5 @@
 .dep.inc
+make.exe.stackdump
 build/
 dist/
 nbproject/
